@@ -1,0 +1,5 @@
+# Zhubin: treat encrypted objects as binary so Git will not
+# silently merge concurrent writes to the same secret or group key.
+*.secret binary
+**/group.json merge=binary
+devices/*.json merge=binary
