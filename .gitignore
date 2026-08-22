@@ -1,0 +1,63 @@
+# Virtual environments
+.venv/
+venv/
+env/
+.env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Packaging / build
+build/
+dist/
+wheels/
+*.egg-info/
+*.egg
+.installed.cfg
+
+# Tests and coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+.hypothesis/
+
+# Type checking and linting
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+dmypy.json
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+private_key*
+*.enc
+.session
+
+# Accidental local vault data (never commit device keys or secrets)
+*.secret
+.tmp.*
+*.tmp.*
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+.cursor/

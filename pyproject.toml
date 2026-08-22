@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zhubin"
+version = "0.1.0"
+description = "Secure Git-backed password manager"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Zhubin Contributors" }]
+keywords = ["password-manager", "security", "git", "encryption"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security :: Cryptography",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "typer>=0.12.0",
+    "rich>=13.0.0",
+    "questionary>=2.0.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "PyNaCl>=1.5.0",
+    "argon2-cffi>=23.1.0",
+    "keyring>=24.0.0",
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.29.0",
+    "jinja2>=3.1.0",
+    "python-multipart>=0.0.9",
+    "itsdangerous>=2.1.0",
+    "pyperclip>=1.8.0",
+    "pyyaml>=6.0.0",
+    "httpx>=0.27.0",
+]
+
+[project.scripts]
+zhubin = "zhubin.cli.app:main"
+z = "zhubin.cli.app:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+    "types-PyYAML>=6.0.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/zhubin"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-v --tb=short"
+
+[tool.ruff]
+src = ["src"]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "PT", "SIM", "RUF"]
+ignore = ["B008", "RUF012"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

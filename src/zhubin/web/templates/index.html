@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ title }} — Password Manager</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>"/>
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-brand">
+        <span class="brand-icon">🔐</span>
+        <span class="brand-name">Zhubin</span>
+      </div>
+      <nav class="header-nav" id="main-nav" style="display:none">
+        <button class="nav-btn" onclick="showView('dashboard')">Dashboard</button>
+        <button class="nav-btn" onclick="showView('secrets')">Secrets</button>
+        <button class="nav-btn" onclick="showView('groups')">Groups</button>
+        <button class="nav-btn" onclick="showView('devices')">Devices</button>
+        <button class="nav-btn" onclick="showView('git')">Git</button>
+        <button class="nav-btn nav-danger" onclick="lockVault()">Lock</button>
+      </nav>
+    </header>
+
+    <!-- Unlock Screen -->
+    <div id="view-unlock" class="view active">
+      <div class="card unlock-card">
+        <div class="unlock-icon">🔐</div>
+        <h1>Zhubin</h1>
+        <p class="subtitle">Secure Git-backed Password Manager</p>
+        <div id="unlock-status" class="status-badge" style="display:none"></div>
+        <form id="unlock-form" onsubmit="doUnlock(event)">
+          <div class="form-group">
+            <label for="passphrase">Vault Passphrase</label>
+            <input type="password" id="passphrase" name="passphrase" autofocus
+                   placeholder="Enter your vault passphrase" required/>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full" id="unlock-btn">
+            Unlock Vault
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="view-dashboard" class="view">
+      <div class="page-header">
+        <h2>Dashboard</h2>
+      </div>
+      <div class="dashboard-grid" id="dashboard-grid">
+        <div class="stat-card" id="stat-groups">
+          <div class="stat-value">—</div>
+          <div class="stat-label">Groups</div>
+        </div>
+        <div class="stat-card" id="stat-secrets">
+          <div class="stat-value">—</div>
+          <div class="stat-label">Secrets</div>
+        </div>
+        <div class="stat-card" id="stat-devices">
+          <div class="stat-value">—</div>
+          <div class="stat-label">Devices</div>
+        </div>
+        <div class="stat-card" id="stat-git">
+          <div class="stat-value">—</div>
+          <div class="stat-label">Git Branch</div>
+        </div>
+      </div>
+      <div class="card" id="git-status-card" style="margin-top:1rem">
+        <h3>Git Status</h3>
+        <div id="git-status-content">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Secrets -->
+    <div id="view-secrets" class="view">
+      <div class="page-header">
+        <h2>Secrets</h2>
+        <div class="page-actions">
+          <input type="search" id="secret-search" placeholder="Search secrets…"
+                 oninput="searchSecrets(this.value)" class="search-input"/>
+          <button class="btn btn-primary" onclick="showAddSecret()">+ Add Secret</button>
+        </div>
+      </div>
+      <div id="secrets-list" class="secrets-list">Loading…</div>
+    </div>
+
+    <!-- Groups -->
+    <div id="view-groups" class="view">
+      <div class="page-header">
+        <h2>Groups</h2>
+        <button class="btn btn-primary" onclick="showCreateGroup()">+ Create Group</button>
+      </div>
+      <div id="groups-list" class="groups-list">Loading…</div>
+    </div>
+
+    <!-- Devices -->
+    <div id="view-devices" class="view">
+      <div class="page-header">
+        <h2>Devices</h2>
+      </div>
+      <div id="devices-list">Loading…</div>
+    </div>
+
+    <!-- Git -->
+    <div id="view-git" class="view">
+      <div class="page-header">
+        <h2>Git</h2>
+        <button class="btn btn-primary" onclick="doSync()">Sync Now</button>
+      </div>
+      <div id="git-detail" class="card">Loading…</div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal-overlay" class="modal-overlay" style="display:none" onclick="closeModal()">
+      <div class="modal-box" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3 id="modal-title">Modal</h3>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast-container"></div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
