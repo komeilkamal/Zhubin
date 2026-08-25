@@ -48,7 +48,7 @@ def create_app(
     app = FastAPI(
         title="Zhubin",
         description="Secure Git-backed password manager — local Web UI",
-        version="0.1.1",
+        version="0.1.2",
         docs_url=None,  # disable Swagger UI in production-like setting
         redoc_url=None,
     )
