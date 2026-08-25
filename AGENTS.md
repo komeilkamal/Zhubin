@@ -178,8 +178,9 @@ Contains:
    `os.urandom()` or `random`.
 6. Write atomic file operations using `_atomic_write()` in
    `storage/filesystem.py`.
-7. All secret names and group names must be validated by `_validate_simple_name()`
-   before filesystem operations.
+7. Group names must be validated by `_validate_simple_name()` before filesystem
+   operations. Secret names must be validated by `_validate_secret_name()`,
+   which splits on `/` and validates each segment with `_validate_simple_name()`.
 8. Format with `ruff format`. Lint with `ruff check`. No warnings allowed.
 9. All public functions must have docstrings.
 10. Do not add logging of sensitive values at any log level.

@@ -6,9 +6,11 @@ manipulate vault paths directly.
 
 Path safety
 -----------
-All group and secret names are validated by the domain models AND by
+All group names and each segment of a (possibly nested) secret name are
+validated by ``_validate_simple_name`` / ``_validate_secret_name`` AND by
 ``_safe_join`` before any filesystem access.  ``..``, absolute paths and
-symlink traversals are rejected.
+symlink traversals are rejected.  Nested secret paths stay under the
+group's ``secrets/`` directory.
 
 Atomic writes
 -------------
@@ -20,6 +22,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import re
 import secrets
 from collections.abc import Iterator
 from pathlib import Path
@@ -43,6 +46,11 @@ _SECRETS_DIR = "secrets"
 _CONFIG_FILE = "config.yaml"
 _GITIGNORE_FILE = ".gitignore"
 _GITATTRIBUTES_FILE = ".gitattributes"
+
+_NAME_RE = re.compile(r"^[a-zA-Z0-9_\-\.]+$")
+_MAX_NAME_LEN = 64
+_MAX_SECRET_DEPTH = 32
+_MAX_SECRET_PATH_LEN = 512
 
 
 # ---------------------------------------------------------------------------
@@ -262,24 +270,74 @@ def _validate_simple_name(name: str, *, field: str = "name") -> None:
     Reject names that contain directory separators or path traversal components.
 
     A valid simple name contains only alphanumeric characters, hyphens,
-    underscores, and dots.  It must not start with a dot, and must not
-    contain path separators.
+    underscores, and dots.  It must not be ``.`` or ``..``, must not
+    contain path separators, and must be at most 64 characters.
     """
-    import re as _re
-
     if not name or name in (".", ".."):
         raise PathTraversalError(f"Invalid {field}: {name!r}")
+    if len(name) > _MAX_NAME_LEN:
+        raise PathTraversalError(f"{field} exceeds maximum length of {_MAX_NAME_LEN}: {name!r}")
     if "/" in name or "\\" in name or "\x00" in name:
         raise PathTraversalError(f"Path separators not allowed in {field}: {name!r}")
-    if not _re.match(r"^[a-zA-Z0-9_\-\.]+$", name):
+    if not _NAME_RE.match(name):
         raise PathTraversalError(f"Invalid characters in {field}: {name!r}")
+
+
+def _validate_secret_name(name: str) -> tuple[str, ...]:
+    """
+    Validate a possibly nested secret name and return its path segments.
+
+    Nested names use ``/`` as a folder separator (e.g. ``ilo/bank/s``).
+    Each segment must be a valid simple name.  Leading, trailing, and
+    empty segments are rejected.
+    """
+    if not name:
+        raise PathTraversalError("Invalid secret name: ''")
+    if "\\" in name or "\x00" in name:
+        raise PathTraversalError(f"Path separators not allowed in secret name: {name!r}")
+    if name.startswith("/") or name.endswith("/") or "//" in name:
+        raise PathTraversalError(f"Invalid secret name: {name!r}")
+    if len(name) > _MAX_SECRET_PATH_LEN:
+        raise PathTraversalError(
+            f"secret name exceeds maximum length of {_MAX_SECRET_PATH_LEN}: {name!r}"
+        )
+    parts = tuple(name.split("/"))
+    if len(parts) > _MAX_SECRET_DEPTH:
+        raise PathTraversalError(
+            f"secret name exceeds maximum depth of {_MAX_SECRET_DEPTH}: {name!r}"
+        )
+    for part in parts:
+        _validate_simple_name(part, field="secret name")
+    return parts
 
 
 def _secret_path(vault_path: Path, group_name: str, secret_name: str) -> Path:
     _validate_simple_name(group_name, field="group name")
-    _validate_simple_name(secret_name, field="secret name")
+    segments = _validate_secret_name(secret_name)
     groups_dir = vault_path / _GROUP_DIR
-    return _safe_join(groups_dir, group_name, _SECRETS_DIR, secret_name + _SECRET_EXT)
+    secrets_dir = _safe_join(groups_dir, group_name, _SECRETS_DIR)
+    return _safe_join(secrets_dir, *segments[:-1], segments[-1] + _SECRET_EXT)
+
+
+def _prune_empty_secret_dirs(secret_file: Path, secrets_dir: Path) -> None:
+    """Remove empty parent directories of *secret_file* up to *secrets_dir*."""
+    try:
+        current = secret_file.parent.resolve()
+        stop = secrets_dir.resolve()
+    except OSError:
+        return
+    while True:
+        if current == stop:
+            break
+        try:
+            current.relative_to(stop)
+        except ValueError:
+            break
+        try:
+            current.rmdir()
+        except OSError:
+            break
+        current = current.parent
 
 
 def save_secret(
@@ -308,22 +366,34 @@ def load_secret_raw(vault_path: Path, group_name: str, secret_name: str) -> byte
 
 
 def delete_secret(vault_path: Path, group_name: str, secret_name: str) -> None:
-    """Delete a secret file."""
+    """Delete a secret file and prune empty parent directories."""
     assert_vault(vault_path)
     path = _secret_path(vault_path, group_name, secret_name)
     if not path.exists():
         raise SecretNotFoundError(f"Secret '{group_name}/{secret_name}' not found.")
+    groups_dir = vault_path / _GROUP_DIR
+    secrets_dir = _safe_join(groups_dir, group_name, _SECRETS_DIR)
     path.unlink()
+    _prune_empty_secret_dirs(path, secrets_dir)
 
 
 def list_secrets(vault_path: Path, group_name: str) -> list[str]:
-    """List secret names (without extension) in a group."""
+    """List secret names (without extension) in a group, including nested paths."""
     assert_vault(vault_path)
+    _validate_simple_name(group_name, field="group name")
     groups_dir = vault_path / _GROUP_DIR
     secrets_dir = _safe_join(groups_dir, group_name, _SECRETS_DIR)
     if not secrets_dir.exists():
         return []
-    return sorted(p.stem for p in secrets_dir.glob(f"*{_SECRET_EXT}") if p.is_file())
+    names: list[str] = []
+    for p in secrets_dir.rglob(f"*{_SECRET_EXT}"):
+        if not p.is_file():
+            continue
+        if p.name.startswith(".tmp."):
+            continue
+        rel = p.relative_to(secrets_dir)
+        names.append(rel.with_suffix("").as_posix())
+    return sorted(names)
 
 
 def secret_exists(vault_path: Path, group_name: str, secret_name: str) -> bool:

@@ -17,6 +17,10 @@ function getCsrfToken() {
   return '';
 }
 
+function secretUrl(group, name) {
+  return `/groups/${encodeURIComponent(group)}/secrets/${encodeURIComponent(name)}`;
+}
+
 async function apiFetch(path, opts = {}) {
   const method = (opts.method || 'GET').toUpperCase();
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
@@ -176,7 +180,7 @@ function searchSecrets(q) {
 
 async function viewSecret(group, name) {
   try {
-    const s = await apiFetch(`/groups/${group}/secrets/${name}`);
+    const s = await apiFetch(secretUrl(group, name));
     openModal(`${group}/${name}`, `
       <div class="form-group"><label>Username</label><input readonly value="${s.username || ''}"/></div>
       <div class="form-group"><label>Password</label>
@@ -199,7 +203,7 @@ function togglePw() {
 
 async function copySecret(group, name, field) {
   try {
-    await apiFetch(`/groups/${group}/secrets/${name}/copy?field=${field}&timeout=30`, { method: 'POST' });
+    await apiFetch(`${secretUrl(group, name)}/copy?field=${encodeURIComponent(field)}&timeout=30`, { method: 'POST' });
     showToast(`${field} copied — clears in 30s`, 'success');
   } catch (err) { showToast(err.message, 'error'); }
 }
@@ -211,7 +215,7 @@ function showAddSecret() {
         <input id="ns-group" placeholder="e.g. personal" required/>
       </div>
       <div class="form-group"><label>Name</label>
-        <input id="ns-name" placeholder="e.g. github" required/>
+        <input id="ns-name" placeholder="e.g. github or ilo/bank/s" required/>
       </div>
       <div class="form-group"><label>Username</label><input id="ns-user"/></div>
       <div class="form-group"><label>Password</label><input type="password" id="ns-pw"/></div>
@@ -233,7 +237,7 @@ async function submitAddSecret(e) {
     notes: document.getElementById('ns-notes').value,
   };
   try {
-    await apiFetch(`/groups/${group}/secrets?name=${encodeURIComponent(name)}`, {
+    await apiFetch(`/groups/${encodeURIComponent(group)}/secrets?name=${encodeURIComponent(name)}`, {
       method: 'POST', body: JSON.stringify(body),
     });
     closeModal();
@@ -244,7 +248,7 @@ async function submitAddSecret(e) {
 
 async function editSecretModal(group, name) {
   try {
-    const s = await apiFetch(`/groups/${group}/secrets/${name}`);
+    const s = await apiFetch(secretUrl(group, name));
     openModal(`Edit ${group}/${name}`, `
       <form id="edit-secret-form" onsubmit="submitEditSecret(event,'${group}','${name}')">
         <div class="form-group"><label>Username</label><input id="es-user" value="${s.username || ''}"/></div>
@@ -269,7 +273,7 @@ async function submitEditSecret(e, group, name) {
   // The GET secret endpoint never returns the password.
   if (pw) body.password = pw;
   try {
-    await apiFetch(`/groups/${group}/secrets/${name}`, { method: 'PUT', body: JSON.stringify(body) });
+    await apiFetch(secretUrl(group, name), { method: 'PUT', body: JSON.stringify(body) });
     closeModal();
     showToast('Secret updated', 'success');
     loadSecrets();
@@ -279,7 +283,7 @@ async function submitEditSecret(e, group, name) {
 async function deleteSecret(group, name) {
   if (!confirm(`Delete ${group}/${name}?`)) return;
   try {
-    await apiFetch(`/groups/${group}/secrets/${name}`, { method: 'DELETE' });
+    await apiFetch(secretUrl(group, name), { method: 'DELETE' });
     showToast('Secret deleted', 'success');
     loadSecrets();
   } catch (err) { showToast(err.message, 'error'); }

@@ -138,7 +138,9 @@ src/zhubin/
 - Atomic writes via `.tmp.<random>` sibling + rename.
 - `_safe_join`: rejects path traversal (absolute paths, `..` components,
   separator characters in names).
-- `_validate_simple_name`: rejects names with `/`, `\`, or `..`.
+- `_validate_simple_name`: rejects single path components with `/`, `\`, or `..`.
+- `_validate_secret_name`: allows `/`-separated nested folders under a group's
+  `secrets/` directory; each segment is validated with `_validate_simple_name`.
 
 ### `storage/git.py`
 

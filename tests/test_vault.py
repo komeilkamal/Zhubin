@@ -151,6 +151,32 @@ class TestSecrets:
         assert ("personal", "github") in results
         assert ("work", "github-enterprise") in results
 
+    def test_nested_secret_roundtrip(self, svc: VaultService, vault_path: Path) -> None:
+        svc.create_group("own")
+        payload = SecretPayload(username="alice", password="NESTED_PLAINTEXT_SCAN_999")
+        svc.add_secret("own", "ilo/bank/s", payload)
+
+        recovered = svc.get_secret("own", "ilo/bank/s")
+        assert recovered.username == "alice"
+        assert recovered.password == "NESTED_PLAINTEXT_SCAN_999"
+
+        secret_file = vault_path / "groups" / "own" / "secrets" / "ilo" / "bank" / "s.secret"
+        assert secret_file.is_file()
+        raw = secret_file.read_bytes()
+        assert b"NESTED_PLAINTEXT_SCAN_999" not in raw
+        assert b"alice" not in raw
+        assert "ilo/bank/s" in svc.list_secrets("own")
+
+    def test_nested_secret_edit_and_delete(self, svc: VaultService, vault_path: Path) -> None:
+        svc.create_group("own")
+        svc.add_secret("own", "ilo/bank/s", SecretPayload(password="old"))
+        svc.edit_secret("own", "ilo/bank/s", SecretPayload(password="new"))
+        assert svc.get_secret("own", "ilo/bank/s").password == "new"
+        svc.delete_secret("own", "ilo/bank/s")
+        with pytest.raises(SecretNotFoundError):
+            svc.get_secret("own", "ilo/bank/s")
+        assert not (vault_path / "groups" / "own" / "secrets" / "ilo").exists()
+
     def test_unauthorized_device_cannot_read(self, vault_path: Path) -> None:
         """A device with no group-key entry cannot decrypt secrets."""
         id1 = create_device_identity()
@@ -197,6 +223,12 @@ class TestKeyRotation:
         # Secrets must still be readable
         assert svc.get_secret("personal", "gmail").password == "mypass"
         assert svc.get_secret("personal", "twitter").password == "bird"
+
+    def test_rotate_nested_secret(self, svc: VaultService) -> None:
+        svc.create_group("own")
+        svc.add_secret("own", "ilo/bank/s", SecretPayload(password="nested-pw"))
+        svc.rotate_group_key("own")
+        assert svc.get_secret("own", "ilo/bank/s").password == "nested-pw"
 
     def test_old_group_key_cannot_decrypt_rotated_secrets(
         self, svc: VaultService, vault_path: Path
@@ -346,6 +378,11 @@ class TestPathTraversal:
         svc.create_group("personal")
         with pytest.raises((PathTraversalError, Exception)):
             svc.add_secret("personal", "../../etc/passwd", SecretPayload(password="x"))
+
+    def test_nested_secret_name_traversal(self, svc: VaultService) -> None:
+        svc.create_group("personal")
+        with pytest.raises(PathTraversalError):
+            svc.add_secret("personal", "ilo/../../etc/passwd", SecretPayload(password="x"))
 
     def test_group_name_absolute_path(self, vault_path: Path) -> None:
         from zhubin.storage.filesystem import load_group

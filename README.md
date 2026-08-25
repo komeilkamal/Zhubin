@@ -136,6 +136,13 @@ pipx install .
 pip install -e .
 ```
 
+## Update
+
+```bash
+# Using pipx (recommended)
+pipx install . --force
+```
+
 After installation, both `zhubin` and `z` (convenience alias) are available.
 
 **Dependencies for clipboard on Linux:**
@@ -777,33 +784,34 @@ directory — will not overwrite an existing vault or identity.
 ### Secrets
 
 ```
-zhubin add <group>/<name>
+zhubin add <group>/<path>
 ```
 
 Add a new secret interactively. Prompts for username, password (hidden),
-URL, notes.
+URL, notes. The first path segment is the group; further `/` segments are
+nested folders, e.g. `own/ilo/bank/s`.
 
 ```
-zhubin edit <group>/<name>
+zhubin edit <group>/<path>
 ```
 
 Edit an existing secret. Press Enter to keep current values.
 
 ```
-zhubin delete <group>/<name> [--yes]
+zhubin delete <group>/<path> [--yes]
 ```
 
 Delete a secret. Prompts for confirmation unless `--yes`.
 
 ```
-zhubin show <group>/<name>
+zhubin show <group>/<path>
 ```
 
 Display all fields of a secret including the password in the terminal.
 Use `cp` for safer access.
 
 ```
-zhubin cp <group>/<name> [FIELD] [--timeout SECONDS]
+zhubin cp <group>/<path> [FIELD] [--timeout SECONDS]
 ```
 
 Copy a field to the clipboard (default: `password`). Other fields:
@@ -813,7 +821,8 @@ Copy a field to the clipboard (default: `password`). Other fields:
 zhubin list [--group GROUP]
 ```
 
-List all secrets in a tree view. Optionally filter by group.
+List all secrets in a tree view (nested folders under each group).
+Optionally filter by group.
 
 ```
 zhubin find <query>

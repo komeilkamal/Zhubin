@@ -217,7 +217,7 @@ async def list_secrets(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/groups/{group}/secrets/{name}")
+@router.get("/groups/{group}/secrets/{name:path}")
 async def get_secret(
     group: str, name: str, svc: VaultService = Depends(_unlocked_svc)
 ) -> dict[str, Any]:
@@ -264,7 +264,7 @@ async def create_secret(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.put("/groups/{group}/secrets/{name}")
+@router.put("/groups/{group}/secrets/{name:path}")
 async def update_secret(
     group: str, name: str, body: SecretBody, svc: VaultService = Depends(_unlocked_svc)
 ) -> dict[str, str]:
@@ -288,7 +288,7 @@ async def update_secret(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.delete("/groups/{group}/secrets/{name}")
+@router.delete("/groups/{group}/secrets/{name:path}")
 async def delete_secret(
     group: str, name: str, svc: VaultService = Depends(_unlocked_svc)
 ) -> dict[str, str]:
@@ -299,7 +299,7 @@ async def delete_secret(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.post("/groups/{group}/secrets/{name}/copy")
+@router.post("/groups/{group}/secrets/{name:path}/copy")
 async def copy_to_clipboard(
     group: str,
     name: str,

@@ -311,7 +311,8 @@ In V1, group names and secret names are stored as plaintext file paths in the
 Git repository. An attacker with repository access can see:
 
 - How many groups exist and their names (e.g., `personal`, `work`).
-- How many secrets exist per group and their names (e.g., `github`, `jira`).
+- How many secrets exist per group and their names, including nested folder
+  paths (e.g., `github`, `jira`, `ilo/bank/s`).
 - Creation and modification timestamps from Git commit history.
 
 Only the **contents** of secrets (username, password, URL, notes) are

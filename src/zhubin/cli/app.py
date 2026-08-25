@@ -205,7 +205,9 @@ def init(
 
 @app.command(name="add")
 def add_secret(
-    path: Annotated[str, typer.Argument(help="group/name format, e.g. personal/github")],
+    path: Annotated[
+        str, typer.Argument(help="group/path format, e.g. personal/github or own/ilo/bank/s")
+    ],
 ) -> None:
     """Add a new secret interactively."""
     from zhubin.vault.models import SecretPayload
@@ -229,7 +231,7 @@ def add_secret(
 
 @app.command(name="edit")
 def edit_secret(
-    path: Annotated[str, typer.Argument(help="group/name")],
+    path: Annotated[str, typer.Argument(help="group/path")],
 ) -> None:
     """Edit an existing secret interactively."""
     from zhubin.vault.models import SecretPayload
@@ -260,7 +262,7 @@ def edit_secret(
 
 @app.command(name="delete")
 def delete_secret(
-    path: Annotated[str, typer.Argument(help="group/name")],
+    path: Annotated[str, typer.Argument(help="group/path")],
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation")] = False,
 ) -> None:
     """Delete a secret permanently."""
@@ -280,7 +282,7 @@ def delete_secret(
 
 @app.command(name="cp")
 def copy_secret(
-    path: Annotated[str, typer.Argument(help="group/name")],
+    path: Annotated[str, typer.Argument(help="group/path")],
     field: Annotated[
         str, typer.Argument(help="Field to copy: password (default), username, url")
     ] = "password",
@@ -336,7 +338,7 @@ def copy_secret(
 
 @app.command(name="show")
 def show_secret(
-    path: Annotated[str, typer.Argument(help="group/name")],
+    path: Annotated[str, typer.Argument(help="group/path")],
 ) -> None:
     """Display a secret's fields (password is shown — use cp for safer access)."""
     from rich.table import Table
@@ -391,8 +393,7 @@ def list_all(
             continue
         secrets = svc.list_secrets(g.name)
         branch = tree.add(f"[cyan]{g.name}[/cyan] [dim]({len(secrets)} secrets)[/dim]")
-        for s in secrets:
-            branch.add(f"[white]{s}[/white]")
+        _add_nested_secret_tree(branch, secrets)
 
     console.print(tree)
 
@@ -567,15 +568,46 @@ def web_ui(
 
 
 def _parse_path(path: str) -> tuple[str, str]:
-    """Parse 'group/name' into (group, name)."""
+    """Parse 'group/path' into (group, secret path). Nested secret folders are allowed."""
     parts = path.split("/", 1)
     if len(parts) != 2 or not parts[0] or not parts[1]:
         err_console.print(
             f"[bold red]Error:[/bold red] Invalid path '{path}'. "
-            "Expected format: [bold]group/name[/bold]"
+            "Expected format: [bold]group/path[/bold] "
+            "(e.g. personal/github or own/ilo/bank/s)"
         )
         raise typer.Exit(1)
     return parts[0], parts[1]
+
+
+def _add_nested_secret_tree(branch: object, names: list[str]) -> None:
+    """Render slash-separated secret names as nested Rich tree folders."""
+    from rich.tree import Tree
+
+    class _Node:
+        def __init__(self) -> None:
+            self.folders: dict[str, _Node] = {}
+            self.leaves: list[str] = []
+
+    root = _Node()
+    for name in names:
+        parts = name.split("/")
+        node = root
+        for part in parts[:-1]:
+            node = node.folders.setdefault(part, _Node())
+        node.leaves.append(parts[-1])
+
+    def render(tree_node: Tree, node: _Node) -> None:
+        keys = sorted(set(node.folders) | set(node.leaves))
+        for key in keys:
+            if key in node.leaves:
+                tree_node.add(f"[white]{key}[/white]")
+            if key in node.folders:
+                sub = tree_node.add(f"[dim]{key}/[/dim]")
+                render(sub, node.folders[key])
+
+    assert isinstance(branch, Tree)
+    render(branch, root)
 
 
 def _prompt_password_edit(current: str) -> str:

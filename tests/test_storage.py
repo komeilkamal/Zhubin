@@ -17,6 +17,7 @@ from zhubin.exceptions import (
 )
 from zhubin.storage.filesystem import (
     assert_vault,
+    delete_secret,
     init_vault,
     list_groups,
     list_secrets,
@@ -118,6 +119,34 @@ class TestSecretStorage:
         tmps = list((vault_path / "groups" / "personal" / "secrets").glob(".tmp.*"))
         assert tmps == []
 
+    def test_nested_secret_roundtrip(self, vault_path: Path) -> None:
+        save_group(vault_path, GroupRecord(id="1", name="own"))
+        save_secret(vault_path, "own", "ilo/bank/s", b"nested-data")
+        expected = vault_path / "groups" / "own" / "secrets" / "ilo" / "bank" / "s.secret"
+        assert expected.is_file()
+        assert expected.read_bytes() == b"nested-data"
+        assert load_secret_raw(vault_path, "own", "ilo/bank/s") == b"nested-data"
+        assert "ilo/bank/s" in list_secrets(vault_path, "own")
+
+    def test_list_mixes_flat_and_nested(self, vault_path: Path) -> None:
+        save_group(vault_path, GroupRecord(id="1", name="own"))
+        save_secret(vault_path, "own", "github", b"flat")
+        save_secret(vault_path, "own", "ilo/bank/s", b"nested")
+        names = list_secrets(vault_path, "own")
+        assert names == ["github", "ilo/bank/s"]
+
+    def test_delete_nested_prunes_empty_dirs(self, vault_path: Path) -> None:
+        save_group(vault_path, GroupRecord(id="1", name="own"))
+        save_secret(vault_path, "own", "ilo/bank/s", b"nested")
+        save_secret(vault_path, "own", "ilo/other", b"keep")
+        delete_secret(vault_path, "own", "ilo/bank/s")
+        secrets_dir = vault_path / "groups" / "own" / "secrets"
+        assert not (secrets_dir / "ilo" / "bank").exists()
+        assert (secrets_dir / "ilo" / "other.secret").is_file()
+        delete_secret(vault_path, "own", "ilo/other")
+        assert not (secrets_dir / "ilo").exists()
+        assert secrets_dir.is_dir()
+
 
 class TestPathSafety:
     def test_traversal_in_secret_name(self, vault_path: Path) -> None:
@@ -135,3 +164,20 @@ class TestPathSafety:
         save_group(vault_path, GroupRecord(id="1", name="personal"))
         with pytest.raises((PathTraversalError, Exception)):
             save_secret(vault_path, "personal", "/etc/passwd", b"x")
+
+    @pytest.mark.parametrize(
+        "bad_name",
+        [
+            "../evil",
+            "ilo/../../etc/passwd",
+            "/etc/passwd",
+            "ilo//s",
+            "ilo/.",
+            "ilo/..",
+            r"ilo\bank",
+        ],
+    )
+    def test_nested_secret_traversal_rejected(self, vault_path: Path, bad_name: str) -> None:
+        save_group(vault_path, GroupRecord(id="1", name="personal"))
+        with pytest.raises(PathTraversalError):
+            save_secret(vault_path, "personal", bad_name, b"x")

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import patch
+from urllib.parse import quote
 
 import pytest
 from fastapi.testclient import TestClient
@@ -187,6 +188,44 @@ class TestWebSecrets:
         )
         r = authed_client.delete("/api/groups/tmp/secrets/todel")
         assert r.status_code == 200
+
+    def test_nested_secret_crud_and_copy(self, authed_client) -> None:
+        nested = "ilo/bank/s"
+        encoded = quote(nested, safe="")
+        authed_client.post("/api/groups", json={"name": "own"})
+        r = authed_client.post(
+            f"/api/groups/own/secrets?name={encoded}",
+            json={"username": "alice", "password": "NESTED_WEB_SECRET", "url": "", "notes": ""},
+        )
+        assert r.status_code == 201
+
+        listed = authed_client.get("/api/groups/own/secrets").json()
+        assert any(item["name"] == nested for item in listed)
+
+        r = authed_client.get(f"/api/groups/own/secrets/{encoded}")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["username"] == "alice"
+        assert "NESTED_WEB_SECRET" not in r.text
+        assert "password" not in data or data.get("password") is None
+
+        with patch("zhubin.clipboard.clipboard.copy") as mock_copy:
+            r = authed_client.post(f"/api/groups/own/secrets/{encoded}/copy")
+        assert r.status_code == 200
+        assert "NESTED_WEB_SECRET" not in r.text
+        mock_copy.assert_called_once()
+        assert mock_copy.call_args[0][0] == "NESTED_WEB_SECRET"
+
+        r = authed_client.put(
+            f"/api/groups/own/secrets/{encoded}",
+            json={"username": "bob", "url": "", "notes": ""},
+        )
+        assert r.status_code == 200
+        assert authed_client.get(f"/api/groups/own/secrets/{encoded}").json()["username"] == "bob"
+
+        r = authed_client.delete(f"/api/groups/own/secrets/{encoded}")
+        assert r.status_code == 200
+        assert authed_client.get(f"/api/groups/own/secrets/{encoded}").status_code == 404
 
 
 class TestWebLocalhostDefault:
