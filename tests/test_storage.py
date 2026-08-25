@@ -17,6 +17,7 @@ from zhubin.exceptions import (
 )
 from zhubin.storage.filesystem import (
     assert_vault,
+    delete_group,
     delete_secret,
     init_vault,
     list_groups,
@@ -90,6 +91,22 @@ class TestGroupStorage:
         groups = list_groups(vault_path)
         names = {g.name for g in groups}
         assert names == {"work", "home"}
+
+    def test_delete_group_removes_directory(self, vault_path: Path) -> None:
+        save_group(vault_path, GroupRecord(id="1", name="personal"))
+        save_secret(vault_path, "personal", "github", b"data")
+        save_secret(vault_path, "personal", "ilo/bank/s", b"nested")
+        delete_group(vault_path, "personal")
+        assert not (vault_path / "groups" / "personal").exists()
+        assert list_groups(vault_path) == []
+
+    def test_delete_nonexistent_group_raises(self, vault_path: Path) -> None:
+        with pytest.raises(GroupNotFoundError):
+            delete_group(vault_path, "missing")
+
+    def test_delete_group_rejects_traversal(self, vault_path: Path) -> None:
+        with pytest.raises(PathTraversalError):
+            delete_group(vault_path, "../evil")
 
 
 class TestSecretStorage:

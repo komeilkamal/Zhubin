@@ -62,6 +62,42 @@ def list_groups() -> None:
     console.print(table)
 
 
+@app.command(name="delete")
+def delete_group(
+    name: Annotated[str, typer.Argument(help="Group name")],
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation")] = False,
+) -> None:
+    """Delete a group and all secrets in it."""
+    from zhubin.cli.app import get_service
+
+    svc = get_service(require_unlock=False)
+    try:
+        if not any(g.name == name for g in svc.list_groups()):
+            err_console.print(f"[bold red]Error:[/bold red] Group '{name}' not found.")
+            raise typer.Exit(1)
+        count = len(svc.list_secrets(name))
+    except typer.Exit:
+        raise
+    except Exception as exc:
+        err_console.print(f"[bold red]Error:[/bold red] {exc}")
+        raise typer.Exit(1) from exc
+
+    if not yes:
+        typer.confirm(
+            f"Delete group '{name}' and all {count} secret(s)? This cannot be undone.",
+            abort=True,
+        )
+
+    try:
+        deleted = svc.delete_group(name)
+        console.print(
+            f"[green]✓[/green] Group [bold]{name}[/bold] deleted ({deleted} secret(s) removed)."
+        )
+    except Exception as exc:
+        err_console.print(f"[bold red]Error:[/bold red] {exc}")
+        raise typer.Exit(1) from exc
+
+
 @app.command(name="rotate")
 def rotate_group(
     name: Annotated[str, typer.Argument(help="Group name")],

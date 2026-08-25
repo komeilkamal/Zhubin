@@ -24,6 +24,7 @@ import contextlib
 import os
 import re
 import secrets
+import shutil
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -258,6 +259,22 @@ def list_groups(vault_path: Path) -> list[GroupRecord]:
 def group_exists(vault_path: Path, name: str) -> bool:
     groups_dir = vault_path / _GROUP_DIR
     return (groups_dir / name / _GROUP_FILE).exists()
+
+
+def delete_group(vault_path: Path, name: str) -> None:
+    """
+    Delete a group directory and all secrets under it.
+
+    Raises GroupNotFoundError if the group does not exist.
+    Path components are validated to prevent traversal outside ``groups/``.
+    """
+    assert_vault(vault_path)
+    _validate_simple_name(name, field="group name")
+    groups_dir = vault_path / _GROUP_DIR
+    group_dir = _safe_join(groups_dir, name)
+    if not (group_dir / _GROUP_FILE).exists():
+        raise GroupNotFoundError(f"Group '{name}' not found.")
+    shutil.rmtree(group_dir)
 
 
 # ---------------------------------------------------------------------------

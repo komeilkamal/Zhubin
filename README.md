@@ -869,6 +869,13 @@ zhubin group rotate <name> [--yes]
 
 Rotate the group encryption key. Re-encrypts all secrets in memory.
 
+```
+zhubin group delete <name> [--yes]
+```
+
+Delete a group and all secrets in it. Prompts for confirmation unless `--yes`.
+Deleted ciphertext may still remain in Git history.
+
 ---
 
 

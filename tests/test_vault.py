@@ -88,6 +88,26 @@ class TestGroups:
         assert "work" in names
         assert "home" in names
 
+    def test_delete_group_removes_secrets(self, svc: VaultService, vault_path: Path) -> None:
+        svc.create_group("personal")
+        svc.add_secret("personal", "github", SecretPayload(password="a"))
+        svc.add_secret("personal", "ilo/bank/s", SecretPayload(password="b"))
+        deleted = svc.delete_group("personal")
+        assert deleted == 2
+        assert "personal" not in {g.name for g in svc.list_groups()}
+        assert not (vault_path / "groups" / "personal").exists()
+
+    def test_delete_empty_group(self, svc: VaultService) -> None:
+        svc.create_group("empty")
+        assert svc.delete_group("empty") == 0
+        assert "empty" not in {g.name for g in svc.list_groups()}
+
+    def test_delete_nonexistent_group_raises(self, svc: VaultService) -> None:
+        from zhubin.exceptions import GroupNotFoundError
+
+        with pytest.raises(GroupNotFoundError):
+            svc.delete_group("missing")
+
 
 # ---------------------------------------------------------------------------
 # Secret management

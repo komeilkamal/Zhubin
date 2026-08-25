@@ -45,6 +45,7 @@ def test_no_phantom_commands_in_readme() -> None:
         "group create",
         "group list",
         "group rotate",
+        "group delete",
         "device init",
         "device list",
         "device authorize",
@@ -78,7 +79,7 @@ def test_help_lists_subcommands() -> None:
 
     group = runner.invoke(app, ["group", "--help"])
     assert group.exit_code == 0
-    for name in ("create", "list", "rotate"):
+    for name in ("create", "list", "rotate", "delete"):
         assert name in group.stdout
 
     device = runner.invoke(app, ["device", "--help"])

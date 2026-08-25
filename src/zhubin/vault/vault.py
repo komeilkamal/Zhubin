@@ -48,6 +48,7 @@ from zhubin.exceptions import (
 )
 from zhubin.storage.filesystem import (
     assert_vault,
+    delete_group,
     delete_secret,
     group_exists,
     iter_all_secrets,
@@ -164,6 +165,20 @@ class VaultService:
     def list_groups(self) -> list[GroupRecord]:
         assert_vault(self._vault_path)
         return list_groups(self._vault_path)
+
+    def delete_group(self, group_name: str) -> int:
+        """
+        Delete a group and all of its secrets.
+
+        Returns the number of secrets that were removed with the group.
+        Raises GroupNotFoundError if the group does not exist.
+
+        Note: ciphertext may remain in Git history until rewritten.
+        """
+        assert_vault(self._vault_path)
+        secret_count = len(list_secrets(self._vault_path, group_name))
+        delete_group(self._vault_path, group_name)
+        return secret_count
 
     def rotate_group_key(self, group_name: str) -> GroupRecord:
         """

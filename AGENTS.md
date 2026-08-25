@@ -328,17 +328,18 @@ Authoritative list (generated from the Typer app; keep docs in sync):
 9. `group create`
 10. `group list`
 11. `group rotate`
-12. `device init`
-13. `device list`
-14. `device fingerprint`
-15. `device show`
-16. `device authorize`
-17. `device revoke`
-18. `status`
-19. `sync`
-20. `lock`
-21. `unlock`
-22. `web`
+12. `group delete`
+13. `device init`
+14. `device list`
+15. `device fingerprint`
+16. `device show`
+17. `device authorize`
+18. `device revoke`
+19. `status`
+20. `sync`
+21. `lock`
+22. `unlock`
+23. `web`
 
 Do not document a command that does not exist. Do not leave a user-facing
 command undocumented.
