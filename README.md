@@ -784,12 +784,27 @@ directory — will not overwrite an existing vault or identity.
 ### Secrets
 
 ```
-zhubin add <group>/<path>
+zhubin add <group>/<path> [--username TEXT] [--url TEXT] [--notes TEXT] [--password-stdin]
 ```
 
-Add a new secret interactively. Prompts for username, password (hidden),
-URL, notes. The first path segment is the group; further `/` segments are
-nested folders, e.g. `own/ilo/bank/s`.
+Add a new secret. Optional `--username` / `-u`, `--url`, and `--notes` skip
+prompts for those fields. The password is never accepted as a CLI argument
+(it would appear in shell history and process lists); it is prompted with
+hidden input, or read from stdin with `--password-stdin` for scripts.
+
+The first path segment is the group; further `/` segments are nested folders,
+e.g. `own/ilo/bank/s`.
+
+```
+# Fully interactive
+zhubin add personal/github
+
+# Fields via options; password still prompted
+zhubin add own/ilo/bank/s --username alice --url https://bank.example --notes "savings"
+
+# Scripted: password from stdin
+printf '%s\n' "$PASS" | zhubin add personal/github -u alice --password-stdin --url https://github.com --notes ""
+```
 
 ```
 zhubin edit <group>/<path>

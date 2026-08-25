@@ -87,6 +87,22 @@ def test_help_lists_subcommands() -> None:
         assert name in device.stdout
 
 
+def test_add_help_exposes_field_options_but_not_password_flag() -> None:
+    from typer.testing import CliRunner
+
+    from zhubin.cli.app import app
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["add", "--help"])
+    assert result.exit_code == 0
+    assert "--username" in result.stdout
+    assert "--url" in result.stdout
+    assert "--notes" in result.stdout
+    assert "--password-stdin" in result.stdout
+    # Passwords must never be accepted as CLI arguments (shell history / ps).
+    assert "--password" not in result.stdout.replace("--password-stdin", "")
+
+
 def test_docs_do_not_claim_age_equivalence() -> None:
     for path in _DOCS:
         if not path.exists():

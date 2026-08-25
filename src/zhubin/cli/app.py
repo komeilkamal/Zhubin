@@ -6,6 +6,7 @@ All commands are registered here from sub-modules.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
 
@@ -208,17 +209,53 @@ def add_secret(
     path: Annotated[
         str, typer.Argument(help="group/path format, e.g. personal/github or own/ilo/bank/s")
     ],
+    username: Annotated[
+        str | None,
+        typer.Option("--username", "-u", help="Username (prompted if omitted)"),
+    ] = None,
+    url: Annotated[
+        str | None,
+        typer.Option("--url", help="URL (prompted if omitted)"),
+    ] = None,
+    notes: Annotated[
+        str | None,
+        typer.Option("--notes", help="Notes (prompted if omitted)"),
+    ] = None,
+    password_stdin: Annotated[
+        bool,
+        typer.Option(
+            "--password-stdin",
+            help="Read password from stdin (do not pass passwords on the command line)",
+        ),
+    ] = False,
 ) -> None:
-    """Add a new secret interactively."""
+    """Add a new secret. Non-password fields may be set via options; password is prompted."""
     from zhubin.vault.models import SecretPayload
 
     group_name, secret_name = _parse_path(path)
     svc = get_service()
 
-    username = typer.prompt("Username", default="")
-    password = typer.prompt("Password", hide_input=True, confirmation_prompt=False)
-    url = typer.prompt("URL", default="")
-    notes = typer.prompt("Notes", default="")
+    if password_stdin:
+        # Read password first; do not prompt for other fields (prompts would
+        # consume the same stdin stream). Omitted options default to empty.
+        password = sys.stdin.readline().rstrip("\n")
+        if not password:
+            err_console.print("[bold red]Error:[/bold red] password is required (stdin was empty).")
+            raise typer.Exit(1)
+        if username is None:
+            username = ""
+        if url is None:
+            url = ""
+        if notes is None:
+            notes = ""
+    else:
+        if username is None:
+            username = typer.prompt("Username", default="")
+        password = typer.prompt("Password", hide_input=True, confirmation_prompt=False)
+        if url is None:
+            url = typer.prompt("URL", default="")
+        if notes is None:
+            notes = typer.prompt("Notes", default="")
 
     payload = SecretPayload(username=username, password=password, url=url, notes=notes)
     try:
