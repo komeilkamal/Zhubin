@@ -10,6 +10,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from zhubin.cli.completion import complete_group_name
+
 app = typer.Typer(help="Manage secret groups.", no_args_is_help=True)
 console = Console()
 err_console = Console(stderr=True)
@@ -64,7 +66,10 @@ def list_groups() -> None:
 
 @app.command(name="delete")
 def delete_group(
-    name: Annotated[str, typer.Argument(help="Group name")],
+    name: Annotated[
+        str,
+        typer.Argument(help="Group name", autocompletion=complete_group_name),
+    ],
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation")] = False,
 ) -> None:
     """Delete a group and all secrets in it."""
@@ -100,7 +105,10 @@ def delete_group(
 
 @app.command(name="rotate")
 def rotate_group(
-    name: Annotated[str, typer.Argument(help="Group name")],
+    name: Annotated[
+        str,
+        typer.Argument(help="Group name", autocompletion=complete_group_name),
+    ],
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation")] = False,
 ) -> None:
     """

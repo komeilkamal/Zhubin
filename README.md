@@ -121,6 +121,7 @@ encrypted. This is a known limitation of V1; see `docs/SECURITY.md`.
 - ✅ Local Web UI (localhost-only by default)
 - ✅ Atomic file writes (crash-safe)
 - ✅ Path traversal protection
+- ✅ Shell Tab completion for group and secret paths
 
 ---
 
@@ -144,6 +145,43 @@ pipx install . --force
 ```
 
 After installation, both `zhubin` and `z` (convenience alias) are available.
+
+### Shell completion
+
+Tab completes command names plus `group/secret` paths (one segment at a
+time, like directories). A group or folder match keeps the trailing `/`
+with no extra space, so the next Tab continues into that path. Names
+come from the vault on disk; the vault does not need to be unlocked.
+
+```bash
+# One-time: install completion for the current shell
+zhubin --install-completion
+```
+
+That typically registers `zhubin` only. For zsh, add both binaries to
+`~/.zshrc`:
+
+```zsh
+eval "$(_ZHUBIN_COMPLETE=zsh_source zhubin)"
+eval "$(_Z_COMPLETE=zsh_source z)"
+```
+
+Or dump the scripts once into a directory on `fpath`:
+
+```bash
+mkdir -p ~/.zfunc
+_ZHUBIN_COMPLETE=zsh_source zhubin > ~/.zfunc/_zhubin
+_Z_COMPLETE=zsh_source z > ~/.zfunc/_z
+```
+
+```zsh
+# ~/.zshrc
+fpath=(~/.zfunc $fpath)
+autoload -Uz compinit && compinit
+```
+
+Then open a new terminal (or `exec zsh`). Completion uses the current
+directory as the vault, or `ZHUBIN_VAULT` if set.
 
 **Dependencies for clipboard on Linux:**
 
@@ -793,7 +831,8 @@ prompts for those fields. The password is never accepted as a CLI argument
 hidden input, or read from stdin with `--password-stdin` for scripts.
 
 The first path segment is the group; further `/` segments are nested folders,
-e.g. `own/ilo/bank/s`.
+e.g. `own/ilo/bank/s`. Tab completes existing groups and secret path
+segments for `add`, `edit`, `delete`, `show`, and `cp`.
 
 ```
 # Fully interactive

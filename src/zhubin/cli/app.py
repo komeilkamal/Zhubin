@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 from rich.console import Console
 
+from zhubin.cli.completion import complete_cp_field, complete_group_name, complete_secret_path
 from zhubin.cli.device import app as device_app
 from zhubin.cli.git import app as git_app
 from zhubin.cli.group import app as group_app
@@ -207,7 +208,11 @@ def init(
 @app.command(name="add")
 def add_secret(
     path: Annotated[
-        str, typer.Argument(help="group/path format, e.g. personal/github or own/ilo/bank/s")
+        str,
+        typer.Argument(
+            help="group/path format, e.g. personal/github or own/ilo/bank/s",
+            autocompletion=complete_secret_path,
+        ),
     ],
     username: Annotated[
         str | None,
@@ -268,7 +273,10 @@ def add_secret(
 
 @app.command(name="edit")
 def edit_secret(
-    path: Annotated[str, typer.Argument(help="group/path")],
+    path: Annotated[
+        str,
+        typer.Argument(help="group/path", autocompletion=complete_secret_path),
+    ],
 ) -> None:
     """Edit an existing secret interactively."""
     from zhubin.vault.models import SecretPayload
@@ -299,7 +307,10 @@ def edit_secret(
 
 @app.command(name="delete")
 def delete_secret(
-    path: Annotated[str, typer.Argument(help="group/path")],
+    path: Annotated[
+        str,
+        typer.Argument(help="group/path", autocompletion=complete_secret_path),
+    ],
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation")] = False,
 ) -> None:
     """Delete a secret permanently."""
@@ -319,9 +330,16 @@ def delete_secret(
 
 @app.command(name="cp")
 def copy_secret(
-    path: Annotated[str, typer.Argument(help="group/path")],
+    path: Annotated[
+        str,
+        typer.Argument(help="group/path", autocompletion=complete_secret_path),
+    ],
     field: Annotated[
-        str, typer.Argument(help="Field to copy: password (default), username, url")
+        str,
+        typer.Argument(
+            help="Field to copy: password (default), username, url",
+            autocompletion=complete_cp_field,
+        ),
     ] = "password",
     timeout: Annotated[
         int | None,
@@ -375,7 +393,10 @@ def copy_secret(
 
 @app.command(name="show")
 def show_secret(
-    path: Annotated[str, typer.Argument(help="group/path")],
+    path: Annotated[
+        str,
+        typer.Argument(help="group/path", autocompletion=complete_secret_path),
+    ],
 ) -> None:
     """Display a secret's fields (password is shown — use cp for safer access)."""
     from rich.table import Table
@@ -407,7 +428,15 @@ def show_secret(
 
 @app.command(name="list")
 def list_all(
-    group: Annotated[str | None, typer.Option("--group", "-g", help="Filter by group")] = None,
+    group: Annotated[
+        str | None,
+        typer.Option(
+            "--group",
+            "-g",
+            help="Filter by group",
+            autocompletion=complete_group_name,
+        ),
+    ] = None,
 ) -> None:
     """List all secrets in the vault."""
     from rich.tree import Tree
